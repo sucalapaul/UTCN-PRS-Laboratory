@@ -1,8 +1,22 @@
-﻿Build started 10/7/2013 3:51:58 PM.
-     1>Project "D:\Dropbox\UTCN\4th Year\PRS\LAB\UTCN-PRS-Laboratory-\diblook.vcxproj" on node 2 (Build target(s)).
+﻿Build started 10/7/2013 3:55:14 PM.
+     1>Project "D:\Dropbox\UTCN\4th Year\PRS\LAB\UTCN-PRS-Laboratory\diblook.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         D:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _VC80_UPGRADE=0x0600 /D _MBCS /D _AFXDLL /Gm /EHsc /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"Stdafx.h" /Fp".\Debug/diblook.pch" /Fo".\Debug/" /Fd".\Debug/vc110.pdb" /FR".\Debug/" /Gd /TP /analyze- /errorReport:prompt dibview.cpp
+         D:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _VC80_UPGRADE=0x0600 /D _MBCS /D _AFXDLL /Gm /EHsc /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yc"Stdafx.h" /Fp".\Debug/diblook.pch" /Fo".\Debug/" /Fd".\Debug/vc110.pdb" /FR".\Debug/" /Gd /TP /analyze- /errorReport:prompt stdafx.cpp
+         stdafx.cpp
+         D:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _VC80_UPGRADE=0x0600 /D _MBCS /D _AFXDLL /Gm /EHsc /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"Stdafx.h" /Fp".\Debug/diblook.pch" /Fo".\Debug/" /Fd".\Debug/vc110.pdb" /FR".\Debug/" /Gd /TP /analyze- /errorReport:prompt dibapi.cpp dibdoc.cpp diblook.cpp dibview.cpp HRTimer.cpp mainfrm.cpp myfile.cpp
+         myfile.cpp
+         mainfrm.cpp
+         HRTimer.cpp
          dibview.cpp
+     1>d:\dropbox\utcn\4th year\prs\lab\utcn-prs-laboratory\dibview.cpp(358): warning C4244: 'argument' : conversion from 'time_t' to 'unsigned int', possible loss of data
+     1>d:\dropbox\utcn\4th year\prs\lab\utcn-prs-laboratory\dibview.cpp(406): warning C4244: 'initializing' : conversion from 'double' to 'int', possible loss of data
+     1>d:\dropbox\utcn\4th year\prs\lab\utcn-prs-laboratory\dibview.cpp(408): warning C4244: 'initializing' : conversion from 'double' to 'int', possible loss of data
+         diblook.cpp
+         dibdoc.cpp
+         dibapi.cpp
+         Generating Code...
+       ResourceCompile:
+         C:\Program Files (x86)\Windows Kits\8.0\bin\x86\rc.exe /D _DEBUG /D _VC80_UPGRADE=0x0600 /D _AFXDLL /l"0x0409" /nologo /fo".\Debug\diblook.res" diblook.rc 
        Link:
          D:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:".\Debug/diblook.exe" /INCREMENTAL /NOLOGO /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /manifestinput:"D:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\Include\Manifest\dpiaware.manifest" /DEBUG /PDB:".\Debug/diblook.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE:NO /IMPLIB:".\Debug\diblook.lib" /MACHINE:X86 /SAFESEH .\Debug\diblook.res
          .\Debug/dibapi.obj
@@ -13,11 +27,12 @@
          .\Debug/mainfrm.obj
          .\Debug/myfile.obj
          .\Debug/stdafx.obj
-         diblook.vcxproj -> D:\Dropbox\UTCN\4th Year\PRS\LAB\UTCN-PRS-Laboratory-\.\Debug\diblook.exe
+     1>dibapi.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/SAFESEH' specification
+         diblook.vcxproj -> D:\Dropbox\UTCN\4th Year\PRS\LAB\UTCN-PRS-Laboratory\.\Debug\diblook.exe
        BscMake:
          D:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\bscmake.exe /nologo /o".\Debug/diblook.bsc" .\Debug/dibapi.sbr .\Debug/dibdoc.sbr .\Debug/diblook.sbr .\Debug/dibview.sbr .\Debug/HRTimer.sbr .\Debug/mainfrm.sbr .\Debug/myfile.sbr .\Debug/stdafx.sbr
-     1>Done Building Project "D:\Dropbox\UTCN\4th Year\PRS\LAB\UTCN-PRS-Laboratory-\diblook.vcxproj" (Build target(s)).
+     1>Done Building Project "D:\Dropbox\UTCN\4th Year\PRS\LAB\UTCN-PRS-Laboratory\diblook.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:01.56
+Time Elapsed 00:00:09.65

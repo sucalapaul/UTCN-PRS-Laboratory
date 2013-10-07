@@ -328,7 +328,91 @@ void CDibView::OnRANSAC_Line()
 {
 	// TODO: Add your command handler code here
 	BEGIN_PROCESSING();
+		double t	= 10;
+	double p		= 0.99;
+	double www		= 0.3;
+	double s		= 2;
 
+	double a, b, c;
+
+	Point start, stop;
+
+	int n			= 0;
+	int inliers		= 0;
+	double percent	= 0;
+	int p1			= 0;
+	int p2			= 0;
+
+	for (int i = 0; i < dwHeight; i++)
+	{
+		for (int j = 0; j < dwWidth; j++)
+		{
+			if (lpSrc[i*w+j] == 0)
+			{
+				points[n++].x = j;
+				points[n].y = i;
+			}
+		}
+	}
+
+	srand(time(NULL));
+	
+
+	while (percent < 30)
+	{
+		p1 = rand() % n;
+		p2 = rand() % n;
+
+		start = points[p1];
+		stop  = points[p2];
+
+		a = points[p1].y - points[p2].y;
+		b = points[p2].x - points[p1].x;
+		c = points[p1].x * points[p2].y - points[p2].x * points[p1].y;
+
+		inliers = 0;
+
+		for (int i = 0; i < n; i++)
+		{
+			double d = abs(a * points[i].x + b * points[i].y + c) / sqrt(a * a + b * b); 
+			if (d < t)
+			{
+				inliers++;
+			}
+		}
+
+		percent = (inliers * 100 / n);
+
+	}
+
+
+	CDC dc;
+	dc.CreateCompatibleDC(0);
+	CBitmap ddBitmap;
+	HBITMAP hDDBitmap = CreateDIBitmap(::GetDC(0),
+		&((LPBITMAPINFO)lpS)->bmiHeader, CBM_INIT, lpSrc,
+		(LPBITMAPINFO)lpS, DIB_RGB_COLORS);
+	ddBitmap.Attach(hDDBitmap);
+	CBitmap* pTempBmp = dc.SelectObject(&ddBitmap);
+	CPen pen(PS_SOLID, 1, RGB(255,0,0));
+	CPen *pTempPen = dc.SelectObject(&pen);
+	// drawing a line from point (x1,y1) to point (x2,y2)
+	//int x1 = points[p1].x;
+	//int y1 = points[p1].y;
+	//int x2 = points[p2].x;
+	//int y2 = points[p2].y;
+
+	int x1 = 0;
+	int y1 = -c/b;
+	int x2 = dwWidth;
+	int y2 = ( -a*dwWidth - c )/ b;
+
+	dc.MoveTo(x1,dwHeight-1-y1);
+	dc.LineTo(x2,dwHeight-1-y2);
+	dc.SelectObject(pTempPen);
+	dc.SelectObject(pTempBmp);
+	GetDIBits(dc.m_hDC, ddBitmap, 0, dwHeight, lpDst,
+		(LPBITMAPINFO)lpD, DIB_RGB_COLORS);
 
 	END_PROCESSING("RANSAC - Line");
 
