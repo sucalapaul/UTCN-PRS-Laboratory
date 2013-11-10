@@ -138,6 +138,10 @@ BEGIN
     BEGIN
         MENUITEM "Parcurgere simpla",           ID_PROCESSING_PARCURGERESIMPLA
         MENUITEM "L1 - RANSAC line",            ID_PROCESSING_L1
+        MENUITEM "L3 - Hough transform - Line", ID_PROCESSING_L3
+        MENUITEM "L3 - Display H",              ID_PROCESSING_L4
+        MENUITEM "L4 - Distance Transform",     ID_PROCESSING_L5
+        MENUITEM "L5 - Histogram of Oriented Gradient", ID_PROCESSING_L6
     END
 END
 

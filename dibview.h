@@ -53,6 +53,10 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnRANSAC_Line();
+	afx_msg void OnProcessingL3();
+	afx_msg void OnProcessingL4();
+	afx_msg void OnProcessingL5();
+	afx_msg void OnProcessingL6();
 };
 
 /////////////////////////////////////////////////////////////////////////////

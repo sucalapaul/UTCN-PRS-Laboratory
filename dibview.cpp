@@ -17,6 +17,8 @@
 #include "dibview.h"
 #include "dibapi.h"
 #include "mainfrm.h"
+#include <algorithm>
+#include <vector>
 
 #include "HRTimer.h"
 #include <Math.h>
@@ -27,6 +29,7 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 #endif
 
 #define BEGIN_PROCESSING() INCEPUT_PRELUCRARI()
+#define PI 3.1416
 
 #define END_PROCESSING(Title) SFARSIT_PRELUCRARI(Title)
 
@@ -107,6 +110,10 @@ BEGIN_MESSAGE_MAP(CDibView, CScrollView)
 	ON_COMMAND(ID_FILE_PRINT, CScrollView::OnFilePrint)
 	ON_COMMAND(ID_FILE_PRINT_PREVIEW, CScrollView::OnFilePrintPreview)
 	ON_COMMAND(ID_PROCESSING_L1, &CDibView::OnRANSAC_Line)
+	ON_COMMAND(ID_PROCESSING_L3, &CDibView::OnProcessingL3)
+	ON_COMMAND(ID_PROCESSING_L4, &CDibView::OnProcessingL4)
+	ON_COMMAND(ID_PROCESSING_L5, &CDibView::OnProcessingL5)
+	ON_COMMAND(ID_PROCESSING_L6, &CDibView::OnProcessingL6)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -417,4 +424,288 @@ void CDibView::OnRANSAC_Line()
 	END_PROCESSING("RANSAC - Line");
 
 
+}
+
+struct hough_data {
+	int v;
+	int rho;
+	int theta;
+};
+
+bool hough_compare_desc(
+	const hough_data &a,
+	const hough_data &b) 
+{
+	return a.v > b.v;
+}
+
+
+std::vector <hough_data> hlist;
+
+int *H;
+int diagSize;
+
+
+void CDibView::OnProcessingL3()
+{
+	BEGIN_PROCESSING();
+
+	//int H[360][200];
+
+	diagSize = sqrt( (double) (dwWidth * dwWidth + dwHeight * dwHeight));
+
+	H = (int *) malloc(diagSize * 360 * sizeof(int));
+
+	for (int i = 0; i<diagSize; i++)
+	{
+		for (int j = 0; j < 360; j++)
+		{
+			H[i * 360 + j] = 0;
+		}
+	}
+
+	for (int i = 0; i < dwHeight; i++)
+	{
+		for (int j = 0; j < dwWidth; j++)
+		{
+			if (lpSrc[i*w+j] == 255)
+			{
+				for (int t = 0; t < 360; t++)
+				{
+					double trad = (t * PI) / 180;
+					int ro = j * cos(trad) + i * sin (trad);
+					if (ro >= 0 && ro < 360){
+						H[ro * 360 + t] += 1;
+					}
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i<360; i++)
+	{
+		for (int j = 0; j < diagSize; j++)
+		{
+			hough_data hd;
+			hd.v =  H[i * diagSize + j];
+			hd.rho = j;
+			hd.theta = i;
+			hlist.push_back(hd);
+		}
+	}
+
+	std::sort(hlist.begin(), hlist.end(), hough_compare_desc);
+
+
+
+		CDC dc;
+	dc.CreateCompatibleDC(0);
+	CBitmap ddBitmap;
+	HBITMAP hDDBitmap = CreateDIBitmap(::GetDC(0),
+		&((LPBITMAPINFO)lpS)->bmiHeader, CBM_INIT, lpSrc,
+		(LPBITMAPINFO)lpS, DIB_RGB_COLORS);
+	ddBitmap.Attach(hDDBitmap);
+	CBitmap* pTempBmp = dc.SelectObject(&ddBitmap);
+	CPen pen(PS_SOLID, 1, RGB(255,0,0));
+	CPen *pTempPen = dc.SelectObject(&pen);
+	// drawing a line from point (x1,y1) to point (x2,y2)
+
+	for (int i = 0; i < 15; i++)
+	{
+		hough_data hd = hlist.at(i);
+		double trad = (hd.theta * PI) / 180;
+
+		int x1 = 0;
+		int y1 = abs( hd.rho / sin(trad));
+		int x2 = dwWidth;
+		int y2 =abs (( hd.rho - x2 * cos(trad) ) / sin (trad));
+
+	/*	int x1 = 0;
+		int y1 = 0;
+		int x2 = dwWidth;
+		int y2 = dwHeight;*/
+
+		dc.MoveTo(x1,y1);
+		dc.LineTo(x2,y2);
+		dc.SelectObject(pTempPen);
+		dc.SelectObject(pTempBmp);
+		GetDIBits(dc.m_hDC, ddBitmap, 0, dwHeight, lpDst,
+			(LPBITMAPINFO)lpD, DIB_RGB_COLORS);
+
+	}
+
+	//for (int i = 0; i < dwHeight; i++)
+	//{
+	//	for (int j = 0; j < dwWidth; j++)
+	//	{
+	//		if 
+	//		lpDst[i*w+j] = H[i * diagSize + j];
+	//	}
+	//}
+
+	END_PROCESSING("HOUGH - Lines");
+
+}
+
+
+void CDibView::OnProcessingL4()
+{
+	BEGIN_PROCESSING();
+
+	for (int i = 0; i < dwHeight-1; i++)
+	{
+		for (int j = 0; j < dwWidth; j++)
+		{
+			lpDst[i*w+j] = H[i * 360 + j];
+		}
+	}
+
+	END_PROCESSING("Display H");
+
+}
+
+
+void CDibView::OnProcessingL5()
+{
+	
+	BEGIN_PROCESSING();
+	
+	int mask[3][3] = {{7, 5, 7}, {5, 0, 5}, {7, 5, 7}};
+
+	int *DT;
+	DT = (int *) malloc(w * dwHeight * sizeof (int) );
+	
+
+	//initialize DT
+	for (int i = 0; i < dwHeight-1; i++)
+		for (int j = 0; j < dwWidth; j++)
+			DT[i*w+j] = lpSrc[i*w+j];
+
+	//First parse
+	for (int i = 1; i < dwHeight-1; i++)
+	{
+		for (int j = 1; j < dwWidth - 1; j++)
+		{	
+			int min = DT[i*w+j];
+			int tmp;
+
+			for (int k = 0; k < 2; k++)
+			{
+				for (int l = 0; l < 3; l++)
+				{
+					if (k == 0 || (k == 1 && l < 2))
+					{
+						tmp = DT[ (i + k - 1)*w + (j + l-1)] + mask[k][l];
+						if (tmp < min)
+							min = tmp;
+					}
+				}
+			}
+			
+			DT[i*w+j] = min;
+		}
+	}
+
+
+	
+	//Second parse
+	for (int i = dwHeight - 2; i > 0; i--)
+	{
+		for (int j = dwWidth - 2; j > 0; j--)
+		{	
+			int min = DT[i*w+j];
+			int tmp;
+
+			for (int k = 1; k < 3; k++)
+			{
+				for (int l = 0; l < 3; l++)
+				{
+					if (k == 2 || (k == 1 && l > 0))
+					{
+						tmp = DT[ (i + k - 1)*w + (j + l-1)] + mask[k][l];
+						if (tmp < min)
+							min = tmp;
+					}
+				}
+			}
+			
+			//DT[i*w+j] = min;
+		}
+	}
+
+	//Copy result to output image
+	for (int i = 0; i < dwHeight; i++)
+		for (int j = 0; j < dwWidth; j++)
+			lpDst[i*w+j] = DT[i*w+j];
+
+
+	END_PROCESSING("Distance transform");
+}
+
+
+void CDibView::OnProcessingL6()
+{
+	BEGIN_PROCESSING();
+
+	int dx[] = {-1, 0, 1};
+	int dy[] = {1, 0, -1};
+
+	
+	int *DX, *DY, *Magnitude, *Orientation, *Hystogram;
+	DX = (int *) malloc(w * dwHeight * sizeof (int) );
+	DY = (int *) malloc(w * dwHeight * sizeof (int) );
+	Magnitude = (int *) malloc(w * dwHeight * sizeof (int) );
+	Orientation = (int *) malloc(w * dwHeight * sizeof (int) );
+	Hystogram = (int *) malloc(w * dwHeight * 9 / 16);
+	
+
+	for (int i = 1; i < dwHeight-1; i++)
+	{
+		for (int j = 1; j < dwWidth-1; j++)
+		{
+			DX[i*w+j] = abs (lpSrc[i*w+j+1] - lpSrc[i*w+j-1]);
+			DY[i*w+j] = abs (lpSrc[(i-1)*w+j] - lpSrc[(i+1)*w+j]);
+			Magnitude[i*w+j] = sqrt ( DX[i*w+j] * DX[i*w+j] + DY[i*w+j] * DY[i*w+j] );
+			Orientation[i*w+j] = atan2( DY[i*w+j], DX[i*w+j] ) * 57.2957795;
+		}
+	}
+
+	int cellHeight = dwHeight / 16;
+	int cellWidth = dwWidth / 16;
+
+	for (int i = 1; i < cellHeight ; i++)
+	{
+		for (int j = 1; j < cellWidth; j++)
+		{
+			//parse each cell
+
+			for (int ii = 0; ii < 16; i++)
+			{
+				for (int jj = 0; jj < 16; j++)
+				{
+					int value = Magnitude[(i * 16 + ii)* w + (j*16 + jj) ] / 26;
+					if (value > 9)
+					{
+						//error
+						int aaaaa = 10 / 0;
+					}
+
+					Hystogram[i * cellHeight]
+				
+				}
+			}
+
+		}
+	}
+
+	for (int i = 0; i < dwHeight; i++)
+		for (int j = 0; j < dwWidth; j++)
+			lpDst[i*w+j] = Magnitude[i*w+j];
+
+
+
+
+
+
+	END_PROCESSING("HOG");
 }
