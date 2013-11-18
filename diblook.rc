@@ -142,6 +142,11 @@ BEGIN
         MENUITEM "L3 - Display H",              ID_PROCESSING_L4
         MENUITEM "L4 - Distance Transform",     ID_PROCESSING_L5
         MENUITEM "L5 - Histogram of Oriented Gradient", ID_PROCESSING_L6
+        MENUITEM "L6 - Statistical Data analysis", ID_PROCESSING_L7
+    END
+    POPUP "Final Project"
+    BEGIN
+        MENUITEM "LDA",                         ID_FINALPROJECT_LDA
     END
 END
 

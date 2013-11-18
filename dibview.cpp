@@ -114,6 +114,8 @@ BEGIN_MESSAGE_MAP(CDibView, CScrollView)
 	ON_COMMAND(ID_PROCESSING_L4, &CDibView::OnProcessingL4)
 	ON_COMMAND(ID_PROCESSING_L5, &CDibView::OnProcessingL5)
 	ON_COMMAND(ID_PROCESSING_L6, &CDibView::OnProcessingL6)
+	ON_COMMAND(ID_FINALPROJECT_LDA, &CDibView::OnFinalprojectLda)
+	ON_COMMAND(ID_PROCESSING_L7, &CDibView::OnProcessingL7)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -687,10 +689,10 @@ void CDibView::OnProcessingL6()
 					if (value > 9)
 					{
 						//error
-						int aaaaa = 10 / 0;
+						//int aaaaa = 10 / 0;
 					}
 
-					Hystogram[i * cellHeight]
+					Hystogram[i * cellHeight];
 				
 				}
 			}
@@ -708,4 +710,283 @@ void CDibView::OnProcessingL6()
 
 
 	END_PROCESSING("HOG");
+}
+
+
+//#define RED		0;
+//#define BLUE	1;
+//
+//#define X		0;
+//#define Y		1;
+
+void CDibView::OnFinalprojectLda()
+{
+	BEGIN_PROCESSING();
+
+	Point *red, *blue;
+	red		= (Point *) malloc(dwHeight * dwWidth * sizeof(Point) / 10);
+	blue	= (Point *) malloc(dwHeight * dwWidth * sizeof(Point) / 10);
+
+	int countRed = 0,
+		countBlue = 0;
+
+	int RED		= 0,
+		BLUE	= 1,
+		X		= 0,
+		Y		= 1;
+
+	double u[2][2],
+		s1[2][2],
+		s2[2][2],
+		sw[2][2];
+
+
+	for (int i = 0; i < 2; i++)
+	{
+		for (int j = 0; j < 2; j++)
+		{
+			u[i][j]  = 0;
+			s1[i][j] = 0;
+			s2[i][j] = 0;
+			sw[i][j] = 0;
+		}
+	}
+
+	for (int i = 0; i < dwHeight; i++)
+	{
+		for (int j = 0; j < dwWidth; j++)
+		{
+			byte pixel =  lpSrc[i*w+j];
+
+			//search red dots
+			if (bmiColorsSrc[pixel].rgbRed == 255 && bmiColorsSrc[pixel].rgbBlue == 0){
+				red[countRed].x = i;
+				red[countRed].y = j;
+				
+				u[RED][X]+=i;
+				u[RED][Y]+=j;
+
+				countRed++;
+			}
+			//search blue dots
+			if (bmiColorsSrc[pixel].rgbRed == 0 && bmiColorsSrc[pixel].rgbBlue == 255){
+				blue[countBlue].x = i;
+				blue[countBlue].y = j;
+				
+				u[BLUE][X]+=i;
+				u[BLUE][Y]+=j;
+
+				countBlue++;
+			}
+		}
+	}
+
+	for (int i = 0; i < 2; i++) 
+	{
+		u[RED][i] = u[RED][i] / countRed;
+		u[BLUE][i] = u[BLUE][i] / countBlue;
+	}
+
+
+	//S1
+	for (int i = 0; i < countRed; i++)
+	{
+		double xx = red[i].x - u[RED][X];
+		double yy = red[i].y - u[RED][Y]; 
+		
+		s1[0][0] = xx * xx;
+		s1[0][1] = xx * yy;
+		s1[1][0] = yy * xx;
+		s1[1][1] = yy * yy;
+	}
+
+	s1[0][0] /= 5;
+	s1[0][1] /= 5;
+	s1[1][0] /= 5;
+	s1[1][1] /= 5;
+
+	//S2
+	for (int i = 0; i < countBlue; i++)
+	{
+		double xx = blue[i].x - u[BLUE][X];
+		double yy = blue[i].y - u[BLUE][Y]; 
+		
+		s2[0][0] = xx * xx;
+		s2[0][1] = xx * yy;
+		s2[1][0] = yy * xx;
+		s2[1][1] = yy * yy;
+	}
+
+	s2[0][0] /= 5;
+	s2[0][1] /= 5;
+	s2[1][0] /= 5;
+	s2[1][1] /= 5;
+
+
+	//Scatter matrix
+	for (int i = 0; i < 2; i++)
+	{
+		for (int j = 0; j < 2; j++)
+		{
+			sw[i][j] = s1[i][j] + s2[i][j];
+		}
+	}
+
+
+	END_PROCESSING("LDA");
+}
+
+
+
+#include <afxdisp.h>
+void CDibView::OnProcessingL7()
+{
+	// In the include section please add:
+	// #include <afxdisp.h>
+	BEGIN_PROCESSING();
+	BYTE *lpSI,*lpSrcI;
+	DWORD dwWidthI,dwHeightI,wI;
+	HDIB hBmpSrcI;
+	CFile fileIn;
+	CFileException fE;
+	AfxEnableControlContainer();
+	char buffer[MAX_PATH];
+	BROWSEINFO bi;
+	ZeroMemory(&bi, sizeof(bi));
+	SHGetPathFromIDList(SHBrowseForFolder(&bi), buffer);
+	if (strcmp(buffer,"")==0) return;
+	char directoryPath[MAX_PATH];
+	CFileFind fFind;
+	int nextFile;
+	CString msg;
+	strcpy(directoryPath,buffer);
+	strcat(directoryPath,"\\face*.bmp"); // search files with the name face* and having the extension .bmp
+	nextFile=fFind.FindFile(directoryPath);
+	int nrImages=0;
+
+	byte **images = new byte*[400];
+	double **covariance = new double*[400];
+
+	int p = 400;
+	int imageSize = 19 * 19;
+
+	//images = (double *) malloc( p * imageSize * sizeof(double) );
+	for (int i = 0; i < p; i++)
+	{
+		images[i] = (byte*) malloc(imageSize * sizeof(byte));
+		covariance[i] = (double*) malloc (p * sizeof(double));
+		for (int j = 0; j< p; j++) 
+		{
+			covariance[i][j] = 0;
+		}
+	}
+	
+	double *u;
+	double *d;
+	u = (double *) malloc( imageSize * sizeof(double) );
+	d = (double *) malloc( imageSize * sizeof(double) );
+
+	
+	
+
+	while (nextFile)
+	{
+		
+		nextFile=fFind.FindNextFile();
+		CString fnIn=fFind.GetFilePath();
+		fileIn.Open(fnIn, CFile::modeRead | CFile::shareDenyWrite, &fE);
+		hBmpSrcI = (HDIB)::ReadDIBFile(fileIn);
+		fileIn.Close();
+		lpSI = (BYTE*)::GlobalLock((HGLOBAL)hBmpSrcI);
+		dwWidthI = ::DIBWidth((LPSTR)lpSI);
+		dwHeightI = ::DIBHeight((LPSTR)lpSI);
+		lpSrcI=(BYTE*)::FindDIBBits((LPSTR)lpSI);
+		DWORD wI=WIDTHBYTES(dwWidthI*8);
+
+		int imgPos = 0;
+		for (int i = 0; i < dwHeightI; i++) {
+			for (int j = 0; j < dwWidthI; j++) {
+				images[nrImages][imgPos] = lpSrcI[i*w+j];
+				imgPos++;
+			}
+		}
+		 
+		nrImages++;
+		::GlobalUnlock((HGLOBAL)hBmpSrcI);
+	}
+		
+	for (int i = 0; i < imageSize; i++)
+	{
+		u[i] = 0;
+		d[i] = 0;
+	}
+
+	//Mean value
+	for (int i = 0; i < nrImages; i++) 
+	{
+		//each picture
+		for (int j = 0; j < imageSize; j++)
+		{
+			//each pixel in picture
+			u[j] += images[i][j];
+		}
+	}
+
+	for (int i = 0; i < imageSize; i++)
+	{
+		u[i] /= nrImages;
+	}
+
+
+	//Standard deviation
+
+	for (int i = 0; i < nrImages; i++) 
+	{
+		//each picture
+		for (int j = 0; j < imageSize; j++)
+		{
+			//each pixel in picture
+			d[j] += pow (( u[j] - images[i][j] ), 2);
+		}
+	}
+
+	for (int i = 0; i < imageSize; i++)
+	{
+		d[i] = sqrt( d[i] / nrImages );
+	}
+
+	//FILE  *f = fopen("out.txt", "w");
+
+	for (int i = 0; i < imageSize; i++)
+	{
+		for (int j = 0; j < imageSize; j ++) 
+		{
+			for (int ii = 0; ii < p; ii++)
+			{
+				covariance[i][j] += (images[ii][i] - u[i]) * (images[ii][j] - u[j]);
+			}
+			covariance[i][j] /= p;
+		}
+	}
+
+	int ppp = 0;
+	for (int i = 0; i < dwHeight; i++)
+	{
+		for (int j = 0; j < dwWidth; j++)
+		{
+			lpDst[i*w+j] = u[ppp];
+			ppp++;
+		}
+	}
+
+
+
+	msg.Format("Found and processed %d images",nrImages);
+	AfxMessageBox(msg);
+
+
+
+
+
+	END_PROCESSING("Covariance");
 }

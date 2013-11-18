@@ -57,6 +57,8 @@ public:
 	afx_msg void OnProcessingL4();
 	afx_msg void OnProcessingL5();
 	afx_msg void OnProcessingL6();
+	afx_msg void OnFinalprojectLda();
+	afx_msg void OnProcessingL7();
 };
 
 /////////////////////////////////////////////////////////////////////////////
