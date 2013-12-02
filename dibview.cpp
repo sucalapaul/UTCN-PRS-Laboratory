@@ -116,6 +116,7 @@ BEGIN_MESSAGE_MAP(CDibView, CScrollView)
 	ON_COMMAND(ID_PROCESSING_L6, &CDibView::OnProcessingL6)
 	ON_COMMAND(ID_FINALPROJECT_LDA, &CDibView::OnFinalprojectLda)
 	ON_COMMAND(ID_PROCESSING_L7, &CDibView::OnProcessingL7)
+	ON_COMMAND(ID_PROCESSING_L8, &CDibView::OnProcessingL8)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -989,4 +990,91 @@ void CDibView::OnProcessingL7()
 
 
 	END_PROCESSING("Covariance");
+}
+
+
+typedef struct Pointf {
+	float x;
+	float y;
+} Pointf;
+
+void CDibView::OnProcessingL8()
+{
+	BEGIN_PROCESSING();
+
+	FILE *f = fopen("prs_07_points.txt", "r");
+	int count;
+	float meanX1 = 0,
+		meanX2 = 0,
+		deviationX1 = 0,
+		deviationX2 = 0;
+
+	fscanf(f, "%d", &count);
+
+	Pointf *points = (Pointf *)malloc(count * sizeof(Pointf));
+
+	for (int i = 0; i < count; i++)
+	{
+		fscanf(f, "%f%f", &points[i].x, &points[i].y);
+		lpDst[(int)points[i].y * w + (int)points[i].x] = 128;
+		
+		meanX1 += points[i].x;
+		meanX2 += points[i].y;
+	}
+
+	meanX1 /= count;
+	meanX2 /= count;
+
+	for (int i = 0; i < count; i++)
+	{
+		deviationX1 += pow(meanX1 - points[i].x, 2);
+		deviationX2 += pow(meanX2 - points[i].y, 2);
+	}
+	
+	deviationX1 = sqrt(deviationX1 / count);
+	deviationX2 = sqrt(deviationX2 / count);
+
+	float covx1x2 = 0;
+	float covx2x1 = 0;
+
+	for (int k = 0; k < count; k++)
+	{
+		float x1k = points[k].x;
+		float x2k = points[k].y;
+		
+		float µ1 = meanX1;
+		float µ2 = meanX2;
+		
+		covx1x2 += (x1k - µ1) * (x2k - µ2);
+	}
+
+	covx1x2 /= count;
+	covx2x1 = covx1x2;
+
+	std::vector<float> fx1, fx2;
+
+	float fx1min = 500000,
+		fx2min = 500000,
+		fx1max = 0,
+		fx2max = 0;
+
+	for (int i = 0; i < count; i++)
+	{
+		float x11 = ((1 / (sqrt (2 * PI) * deviationX1 )) * exp(-1 / ( 2 * deviationX1 ) * pow(points[i].x * deviationX1, 2)));
+		float x22 = ((1 / (sqrt (2 * PI) * deviationX2 )) * exp(-1 / ( 2 * deviationX2 ) * pow(points[i].u * deviationX2, 2)));
+		
+		fx1.push_back(x11);
+		fx2.push_back(x22);
+		
+		fx1min = x11 < fx1min ? x11 : fx1min;
+		fx2min = x22 < fx2min ? x22 : fx2min;
+		
+		fx1max = x11 > fx1max ? x11 : fx1max;
+		fx2max = x22 > fx2max ? x22 : fx2max;
+	}
+
+
+
+
+	END_PROCESSING("Density estimation");
 }
