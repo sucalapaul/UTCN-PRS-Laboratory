@@ -60,6 +60,7 @@ public:
 	afx_msg void OnFinalprojectLda();
 	afx_msg void OnProcessingL7();
 	afx_msg void OnProcessingL8();
+	afx_msg void OnProcessingL9();
 };
 
 /////////////////////////////////////////////////////////////////////////////

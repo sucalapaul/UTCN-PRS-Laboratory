@@ -144,6 +144,7 @@ BEGIN
         MENUITEM "L5 - Histogram of Oriented Gradient", ID_PROCESSING_L6
         MENUITEM "L6 - Statistical Data analysis", ID_PROCESSING_L7
         MENUITEM "L7 - Density Estimation",     ID_PROCESSING_L8
+        MENUITEM "L9 - Perceptron",             ID_PROCESSING_L9
     END
     POPUP "Final Project"
     BEGIN

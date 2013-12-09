@@ -117,6 +117,7 @@ BEGIN_MESSAGE_MAP(CDibView, CScrollView)
 	ON_COMMAND(ID_FINALPROJECT_LDA, &CDibView::OnFinalprojectLda)
 	ON_COMMAND(ID_PROCESSING_L7, &CDibView::OnProcessingL7)
 	ON_COMMAND(ID_PROCESSING_L8, &CDibView::OnProcessingL8)
+	ON_COMMAND(ID_PROCESSING_L9, &CDibView::OnProcessingL9)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1061,7 +1062,7 @@ void CDibView::OnProcessingL8()
 	for (int i = 0; i < count; i++)
 	{
 		float x11 = ((1 / (sqrt (2 * PI) * deviationX1 )) * exp(-1 / ( 2 * deviationX1 ) * pow(points[i].x * deviationX1, 2)));
-		float x22 = ((1 / (sqrt (2 * PI) * deviationX2 )) * exp(-1 / ( 2 * deviationX2 ) * pow(points[i].u * deviationX2, 2)));
+		float x22 = ((1 / (sqrt (2 * PI) * deviationX2 )) * exp(-1 / ( 2 * deviationX2 ) * pow(points[i].y * deviationX2, 2)));
 		
 		fx1.push_back(x11);
 		fx2.push_back(x22);
@@ -1077,4 +1078,119 @@ void CDibView::OnProcessingL8()
 
 
 	END_PROCESSING("Density estimation");
+}
+
+void CDibView::OnProcessingL9()
+{
+	BEGIN_PROCESSING();
+
+	Point *red, *blue;
+	red		= (Point *) malloc(dwHeight * dwWidth * sizeof(Point) / 10);
+	blue	= (Point *) malloc(dwHeight * dwWidth * sizeof(Point) / 10);
+
+	int countRed = 0,
+		countBlue = 0;
+
+	for (int i = 0; i < dwHeight; i++)
+	{
+		for (int j = 0; j < dwWidth; j++)
+		{
+			byte pixel =  lpSrc[i*w+j];
+
+			//search red dots
+			if (bmiColorsSrc[pixel].rgbRed == 255 && bmiColorsSrc[pixel].rgbBlue == 0){
+				red[countRed].x = j;
+				red[countRed].y = i;
+
+				countRed++;
+			}
+			//search blue dots
+			if (bmiColorsSrc[pixel].rgbRed == 0 && bmiColorsSrc[pixel].rgbBlue == 255){
+				blue[countBlue].x = j;
+				blue[countBlue].y = i;
+
+				countBlue++;
+			}
+		}
+	}
+
+	int **Y;
+	
+	Y = (int**)malloc(3 * sizeof(int *));
+	for (int i = 0; i < 3; i++)
+	{
+		Y[i] = (int *)malloc((countBlue + countRed) * sizeof(int));
+	}
+
+
+	int countTotal = 0;
+	
+	for (int i = 0; i < countRed; i++)
+	{
+		Y[0][countTotal] = 1;
+		Y[1][countTotal] = red[i].x;
+		Y[2][countTotal] = red[i].y;
+		countTotal++;
+	}
+	for (int i = 0; i < countBlue; i++)
+	{
+		Y[0][countTotal] = -1;
+		Y[1][countTotal] = -blue[i].x;
+		Y[2][countTotal] = -blue[i].y;
+		countTotal++;
+	}
+
+
+	double a[3] = { 0.1, 0.1, 0.1 };
+	double b[3] = { 0, 0, 0 };
+	double n = 1;
+	double theta = 0.0001;
+	double k = 0;
+
+	while(1)
+	{
+		b[0] = 0;
+		b[1] = 0;
+		b[2] = 0;
+
+		for (int i = 0; i < countTotal; i++)
+		{
+			double tmp = Y[0][i] * a[0] + Y[1][i] * a[1] + Y[2][i] * a[2];
+			if (tmp < 0)
+			{
+				a[0] = a[0] + n * Y[0][i];
+				a[1] = a[1] + n * Y[1][i];
+				a[2] = a[2] + n * Y[2][i];
+
+				b[0] = b[0] + n * Y[0][i];
+				b[1] = b[1] + n * Y[1][i];
+				b[2] = b[2] + n * Y[2][i];
+			}
+
+			tmp = Y[0][i] * b[0] + Y[1][i] * b[1] + Y[2][i] * b[2];
+		}
+
+		double mod = sqrt(b[0] * b[0] + b[1] * b[1] + b[2] * b[2]);
+		if (mod < theta)
+			break;
+
+
+	}
+
+
+	
+
+	//while (1)
+	//{
+	//	b[0] = 0;
+	//	b[1] = 0;
+	//	b[2] = 0;
+	//	k++;
+
+	//	
+
+	//
+	//}
+
+	END_PROCESSING("Perceptron");
 }
