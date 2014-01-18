@@ -22,6 +22,11 @@
 
 #include "HRTimer.h"
 #include <Math.h>
+#include "armadillo"
+
+#include <afxdisp.h> 
+
+using namespace arma;
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -721,118 +726,394 @@ void CDibView::OnProcessingL6()
 //#define X		0;
 //#define Y		1;
 
+typedef struct Entity {
+	int width;
+	int height;
+	double avgIntesity;
+	double stdDeviation;
+
+} Entity;
+
 void CDibView::OnFinalprojectLda()
 {
 	BEGIN_PROCESSING();
 
 	Point *red, *blue;
-	red		= (Point *) malloc(dwHeight * dwWidth * sizeof(Point) / 10);
+
+	Entity ped[100];
+	Entity nonPed[100];
+
+	Entity pedAvg, nonPedAvg;
+
+	pedAvg.height = 0;
+	pedAvg.width = 0;
+
+	nonPedAvg.width = 0;
+	nonPedAvg.height = 0;
+
+		red		= (Point *) malloc(dwHeight * dwWidth * sizeof(Point) / 10);
 	blue	= (Point *) malloc(dwHeight * dwWidth * sizeof(Point) / 10);
 
 	int countRed = 0,
 		countBlue = 0;
 
-	int RED		= 0,
-		BLUE	= 1,
-		X		= 0,
-		Y		= 1;
+	int PIETON		= 0,
+		NON_PIETON	= 1,
+		WIDTH		= 0,
+		HEIGHT		= 1,
+		AVG			= 2,
+		STD_DEV		= 3;
 
-	double u[2][2],
-		s1[2][2],
-		s2[2][2],
-		sw[2][2];
+	double u[2][4],
+		s1[4][4],
+		s2[4][4],
+		sw[2][4];
 
 
 	for (int i = 0; i < 2; i++)
 	{
-		for (int j = 0; j < 2; j++)
+		for (int j = 0; j < 4; j++)
 		{
 			u[i][j]  = 0;
 			s1[i][j] = 0;
-			s2[i][j] = 0;
-			sw[i][j] = 0;
 		}
 	}
 
-	for (int i = 0; i < dwHeight; i++)
+	for (int i = 0; i < 4; i++)
 	{
-		for (int j = 0; j < dwWidth; j++)
+		for (int j = 0; j < 4; j++)
 		{
-			byte pixel =  lpSrc[i*w+j];
-
-			//search red dots
-			if (bmiColorsSrc[pixel].rgbRed == 255 && bmiColorsSrc[pixel].rgbBlue == 0){
-				red[countRed].x = i;
-				red[countRed].y = j;
-				
-				u[RED][X]+=i;
-				u[RED][Y]+=j;
-
-				countRed++;
-			}
-			//search blue dots
-			if (bmiColorsSrc[pixel].rgbRed == 0 && bmiColorsSrc[pixel].rgbBlue == 255){
-				blue[countBlue].x = i;
-				blue[countBlue].y = j;
-				
-				u[BLUE][X]+=i;
-				u[BLUE][Y]+=j;
-
-				countBlue++;
-			}
+			s1[i][j] = 0;
+			s2[i][j] = 0;
 		}
 	}
 
-	for (int i = 0; i < 2; i++) 
-	{
-		u[RED][i] = u[RED][i] / countRed;
-		u[BLUE][i] = u[BLUE][i] / countBlue;
-	}
+
+	BYTE*lpSI,*lpSrcI; 
+	DWORD dwWidthI,dwHeightI,wI; 
+	HDIB hBmpSrcI; 
+	CFile fileIn; 
+	CFileException fE; 
+
+	AfxEnableControlContainer(); 
+	char buffer[MAX_PATH]; 
+	BROWSEINFO bi; 
+	ZeroMemory(&bi, sizeof(bi)); 
+	SHGetPathFromIDList(SHBrowseForFolder(&bi), buffer); 
+	if (strcmp(buffer,"")==0) return; 
+	char directoryPath[MAX_PATH]; 
+	CFileFind fFind; 
+	int nextFile; 
+	CString msg; 
+	//TEMPLATE class 1
+	strcpy(directoryPath,buffer); 
+	strcat(directoryPath,"\\np_test_*.bmp"); 
+	nextFile=fFind.FindFile(directoryPath); 
+	int nrImagesNonPietoni=0; 
+
+	while (nextFile) 
+	{ 
+		nrImagesNonPietoni++; 
+		nextFile=fFind.FindNextFile(); 
+		CString fnIn=fFind.GetFilePath(); 
+		fileIn.Open(fnIn, CFile::modeRead | CFile::shareDenyWrite, &fE); 
+		hBmpSrcI= (HDIB)::ReadDIBFile(fileIn); 
+		fileIn.Close(); 
+		lpSI= (BYTE*)::GlobalLock((HGLOBAL)hBmpSrcI); 
+		dwWidthI= ::DIBWidth((LPSTR)lpSI); 
+		dwHeightI= ::DIBHeight((LPSTR)lpSI); 
+		lpSrcI=(BYTE*)::FindDIBBits((LPSTR)lpSI); 
+		DWORD wI=WIDTHBYTES(dwWidthI*8); 
+		///////////// DO THE PROCESING WITH THE CURRENT IMAGE IN CLASS NON PIETONI
+		
+		nonPed[nrImagesNonPietoni].height = dwHeightI;
+		nonPed[nrImagesNonPietoni].width = dwWidthI;
+
+		nonPedAvg.height += dwHeightI;
+		nonPedAvg.width += dwWidthI;
+
+		double avgI=0;
+		double stDev=0;
+
+		for (int i = 0; i < dwHeightI; i++)
+		{
+			for (int j = 0; j < dwWidthI; j++)
+			{
+				avgI+=lpSrcI[i*w+j];
+			}
+		}
+		avgI /= (dwHeightI * dwWidthI);
+
+		nonPed[nrImagesNonPietoni].avgIntesity = avgI;
+		nonPedAvg.avgIntesity += avgI;
+
+		for(int i=0; i < dwHeight; i++)
+		{
+			for(int j=0; j < dwWidth; j++)
+			{
+				stDev+=(lpSrc[i*w+j]-avgI)*(lpSrc[i*w+j]-avgI);
+			}
+		}
+		stDev/=(dwHeight*dwWidth);
+		stDev= sqrt(stDev);
+		nonPed[nrImagesNonPietoni].stdDeviation = stDev;
+		nonPedAvg.stdDeviation += stDev;
+
+		::GlobalUnlock((HGLOBAL)hBmpSrcI); 
+	} 
+	msg.Format("Found and processed %d images in class Non Pietoni",nrImagesNonPietoni); 
+	AfxMessageBox(msg); 
+
+
+
+	//TEMPLATE class 2
+	strcpy(directoryPath,buffer); 
+	strcat(directoryPath,"\\ped_test_*.bmp"); 
+	nextFile=fFind.FindFile(directoryPath); 
+	int nrImagesPietoni=0; 
+	while (nextFile) 
+	{ 
+		nrImagesPietoni++; 
+		nextFile=fFind.FindNextFile(); 
+		CString fnIn=fFind.GetFilePath(); 
+		fileIn.Open(fnIn, CFile::modeRead | CFile::shareDenyWrite, &fE); 
+		hBmpSrcI= (HDIB)::ReadDIBFile(fileIn); 
+		fileIn.Close(); 
+		lpSI= (BYTE*)::GlobalLock((HGLOBAL)hBmpSrcI); 
+		dwWidthI= ::DIBWidth((LPSTR)lpSI); 
+		dwHeightI= ::DIBHeight((LPSTR)lpSI); 
+		lpSrcI=(BYTE*)::FindDIBBits((LPSTR)lpSI); 
+		DWORD wI=WIDTHBYTES(dwWidthI*8); 
+		///////////// DO THE PROCESSING WITH THE CURRENT IMAGE IN CLASS 2
+
+		ped[nrImagesPietoni].height = dwHeightI;
+		ped[nrImagesPietoni].width = dwWidthI;
+
+		pedAvg.height += dwHeightI;
+		pedAvg.width += dwWidthI;
+
+		double avgI=0;
+		double stDev=0;
+
+		for (int i = 0; i < dwHeightI; i++)
+		{
+			for (int j = 0; j < dwWidthI; j++)
+			{
+				avgI+=lpSrcI[i*w+j];
+			}
+		}
+		avgI /= (dwHeightI * dwWidthI);
+
+		ped[nrImagesPietoni].avgIntesity = avgI;
+		pedAvg.avgIntesity += avgI;
+
+		for(int i=0; i < dwHeight; i++)
+		{
+			for(int j=0; j < dwWidth; j++)
+			{
+				stDev+=(lpSrc[i*w+j]-avgI)*(lpSrc[i*w+j]-avgI);
+			}
+		}
+		stDev/=(dwHeight*dwWidth);
+		stDev= sqrt(stDev);
+		ped[nrImagesPietoni].stdDeviation = stDev;
+		pedAvg.stdDeviation += stDev;		
+
+		::GlobalUnlock((HGLOBAL)hBmpSrcI); 
+	} 
+	msg.Format("Found and processed %d images in class Pietoni", nrImagesPietoni); 
+	AfxMessageBox(msg);
+	
+	u[PIETON][WIDTH] = pedAvg.width / nrImagesPietoni;
+	u[PIETON][HEIGHT] = pedAvg.height / nrImagesPietoni;
+	u[PIETON][AVG] = pedAvg.avgIntesity / nrImagesPietoni;
+	u[PIETON][STD_DEV] = pedAvg.stdDeviation / nrImagesPietoni;
+	
+	u[NON_PIETON][WIDTH] = pedAvg.width / nrImagesNonPietoni;
+	u[NON_PIETON][HEIGHT] = pedAvg.height / nrImagesNonPietoni;
+	u[NON_PIETON][AVG] = pedAvg.avgIntesity / nrImagesNonPietoni;
+	u[NON_PIETON][STD_DEV] = pedAvg.stdDeviation / nrImagesNonPietoni;
+
+
+	//for (int i = 0; i < dwHeight; i++)
+	//{
+	//	for (int j = 0; j < dwWidth; j++)
+	//	{
+	//		byte pixel =  lpSrc[i*w+j];
+
+	//		//search red dots
+	//		if (bmiColorsSrc[pixel].rgbRed == 255 && bmiColorsSrc[pixel].rgbBlue == 0){
+	//			red[countRed].x = j;
+	//			red[countRed].y = i;
+	//			
+	//			u[RED][X]+=j;
+	//			u[RED][Y]+=i;
+
+	//			countRed++;
+	//		}
+	//		//search blue dots
+	//		if (bmiColorsSrc[pixel].rgbRed == 0 && bmiColorsSrc[pixel].rgbBlue == 255){
+	//			blue[countBlue].x = j;
+	//			blue[countBlue].y = i;
+	//			
+	//			u[BLUE][X]+=j;
+	//			u[BLUE][Y]+=i;
+
+	//			countBlue++;
+	//		}
+	//	}
+	//}
+
+	//for (int i = 0; i < 2; i++) 
+	//{
+	//	u[RED][i] = u[RED][i] / countRed;
+	//	u[BLUE][i] = u[BLUE][i] / countBlue;
+	//}
 
 
 	//S1
-	for (int i = 0; i < countRed; i++)
+	//for (int i = 0; i < countRed; i++)
+	//{
+	//	double xx = red[i].x - u[RED][X];
+	//	double yy = red[i].y - u[RED][Y]; 
+	//	
+	//	s1[0][0] = xx * xx;
+	//	s1[0][1] = xx * yy;
+	//	s1[1][0] = yy * xx;
+	//	s1[1][1] = yy * yy;
+	//}
+
+	//s1[0][0] /= 5;
+	//s1[0][1] /= 5;
+	//s1[1][0] /= 5;
+	//s1[1][1] /= 5;
+
+	double buf[4];
+	for (int i = 0; i < nrImagesPietoni; i++)
 	{
-		double xx = red[i].x - u[RED][X];
-		double yy = red[i].y - u[RED][Y]; 
+		buf[1] = ped[i].width - u[PIETON][WIDTH];
+		buf[2] = ped[i].height - u[PIETON][HEIGHT];
+		buf[3] = ped[i].avgIntesity - u[PIETON][AVG];
+		buf[4] = ped[i].stdDeviation - u[PIETON][STD_DEV];
 		
-		s1[0][0] = xx * xx;
-		s1[0][1] = xx * yy;
-		s1[1][0] = yy * xx;
-		s1[1][1] = yy * yy;
-	}
 
-	s1[0][0] /= 5;
-	s1[0][1] /= 5;
-	s1[1][0] /= 5;
-	s1[1][1] /= 5;
-
-	//S2
-	for (int i = 0; i < countBlue; i++)
-	{
-		double xx = blue[i].x - u[BLUE][X];
-		double yy = blue[i].y - u[BLUE][Y]; 
-		
-		s2[0][0] = xx * xx;
-		s2[0][1] = xx * yy;
-		s2[1][0] = yy * xx;
-		s2[1][1] = yy * yy;
-	}
-
-	s2[0][0] /= 5;
-	s2[0][1] /= 5;
-	s2[1][0] /= 5;
-	s2[1][1] /= 5;
-
-
-	//Scatter matrix
-	for (int i = 0; i < 2; i++)
-	{
-		for (int j = 0; j < 2; j++)
+		for (int ii = 0; ii < 4; ii++)
 		{
-			sw[i][j] = s1[i][j] + s2[i][j];
+			for (int j = 0; j < 4; j++)
+			{
+				s1[ii][j] = buf[ii] * buf[j];
+			}
 		}
 	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			s1[i][j] /= nrImagesPietoni;
+		}
+	}
+
+	//S2
+	for (int i = 0; i < nrImagesPietoni; i++)
+	{
+		buf[1] = ped[i].width - u[NON_PIETON][WIDTH];
+		buf[2] = ped[i].height - u[NON_PIETON][HEIGHT];
+		buf[3] = ped[i].avgIntesity - u[NON_PIETON][AVG];
+		buf[4] = ped[i].stdDeviation - u[NON_PIETON][STD_DEV];
+		
+
+		for (int ii = 0; ii < 4; ii++)
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				s2[ii][j] = buf[ii] * buf[j];
+			}
+		}
+	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			s2[i][j] /= nrImagesPietoni;
+		}
+	}
+
+	
+	mat SW(4,4);
+
+	//Scatter matrix
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			sw[i][j] = s1[i][j] + s2[i][j];
+			SW(i,j) = s1[i][j] + s2[i][j];
+		}
+	}
+
+	mat SWi = SW.i();
+
+	mat miu(4, 1);
+	for (int i = 0; i < 4; i++)
+	{
+		miu(i,0) = u[PIETON][i] - u[NON_PIETON][i];
+	}
+
+	double swi[4][4];
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			swi[i][j] = SWi(i,j);
+		}
+	}
+
+	mat ww(4, 1);
+	ww = SWi * miu;
+
+	
+	double wx1 = ww(0,0);
+	double wx2 = ww(1,0);
+	double slope = wx2/wx1;
+
+
+
+
+	CDC dc;
+	dc.CreateCompatibleDC(0);
+	CBitmap ddBitmap;
+	HBITMAP hDDBitmap = CreateDIBitmap(::GetDC(0),
+		&((LPBITMAPINFO)lpS)->bmiHeader, CBM_INIT, lpSrc,
+		(LPBITMAPINFO)lpS, DIB_RGB_COLORS);
+	ddBitmap.Attach(hDDBitmap);
+	CBitmap* pTempBmp = dc.SelectObject(&ddBitmap);
+	CPen pen(PS_SOLID, 1, RGB(255,0,0));
+	CPen *pTempPen = dc.SelectObject(&pen);
+	// drawing a line from point (x1,y1) to point (x2,y2)
+
+
+	//int x1 = 0;
+	//int y1 = 0;
+	//int x2 = dwWidth;
+	//int y2 = slope * x2;
+
+
+	//if (slope < 0){
+		int x1 = dwWidth / 2;
+		int y1 = dwHeight / 2;
+		int x2 = dwWidth / 4;
+		int y2 = slope * x2;
+//	}
+	dc.MoveTo(x1,y1);
+	dc.LineTo(x2,y2);
+
+	dc.SelectObject(pTempPen);
+	dc.SelectObject(pTempBmp);
+	GetDIBits(dc.m_hDC, ddBitmap, 0, dwHeight, lpDst,
+		(LPBITMAPINFO)lpD, DIB_RGB_COLORS);
+
 
 
 	END_PROCESSING("LDA");
