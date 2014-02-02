@@ -1042,6 +1042,7 @@ void CDibView::OnFinalprojectLda()
 
 	
 	mat SW(4,4);
+	mat SWi(4,4);
 
 	//Scatter matrix
 	for (int i = 0; i < 4; i++)
@@ -1053,7 +1054,7 @@ void CDibView::OnFinalprojectLda()
 		}
 	}
 
-	mat SWi = SW.i();
+	SWi = SW.i();
 
 	mat miu(4, 1);
 	for (int i = 0; i < 4; i++)
@@ -1076,6 +1077,8 @@ void CDibView::OnFinalprojectLda()
 	
 	double wx1 = ww(0,0);
 	double wx2 = ww(1,0);
+	double wx3 = ww(2,0);
+	double wx4 = ww(3,0);
 	double slope = wx2/wx1;
 
 
